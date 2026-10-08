@@ -29,8 +29,8 @@ public class Scoreboard {
         if (home < 0 || away < 0) throw new ScoreboardException("Score cannot be negative");
         lock.writeLock().lock();
         try {
-            Match m = get(id);
-            active(m);
+            Match m = getMatch(id);
+            isActive(m);
             m.updateScore(home, away);
         } finally {
             lock.writeLock().unlock();
@@ -40,10 +40,10 @@ public class Scoreboard {
     public MatchSummary finishMatch(UUID id) {
         lock.writeLock().lock();
         try {
-            Match m = get(id);
-            active(m);
+            Match m = getMatch(id);
+            isActive(m);
             m.finish();
-            return summary(m);
+            return getMatchSummary(m);
         } finally {
             lock.writeLock().unlock();
         }
@@ -55,7 +55,7 @@ public class Scoreboard {
             return matches.values().stream().filter(m -> m.getStatus() == MatchStatus.IN_PROGRESS)
                     .sorted(Comparator.comparingInt(Match::getTotalScore).reversed()
                             .thenComparing(Comparator.comparingLong(Match::getStartOrder).reversed()))
-                    .map(this::summary).toList();
+                    .map(this::getMatchSummary).toList();
         } finally {
             lock.readLock().unlock();
         }
@@ -64,26 +64,26 @@ public class Scoreboard {
     public void cancelMatch(UUID id) {
         lock.writeLock().lock();
         try {
-            Match m = get(id);
-            active(m);
+            Match m = getMatch(id);
+            isActive(m);
             m.cancel();
         } finally {
             lock.writeLock().unlock();
         }
     }
 
-    private Match get(UUID id) {
+    private Match getMatch(UUID id) {
         if (id == null) throw new ScoreboardException("ID is null");
         Match m = matches.get(id);
         if (m == null) throw new ScoreboardException("Match not found");
         return m;
     }
 
-    private void active(Match m) {
+    private void isActive(Match m) {
         if (m.getStatus() != MatchStatus.IN_PROGRESS) throw new ScoreboardException("Match is not in progress");
     }
 
-    private MatchSummary summary(Match m) {
+    private MatchSummary getMatchSummary(Match m) {
         return new MatchSummary(m.getId(), m.getHomeTeam(), m.getHomeScore(), m.getAwayTeam(), m.getAwayScore());
     }
 
